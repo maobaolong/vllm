@@ -25,6 +25,7 @@ from vllm.config import CompilationLevel, VllmConfig
 from vllm.core.scheduler import SchedulerOutputs
 from vllm.distributed import get_pp_group
 from vllm.distributed.kv_transfer import get_kv_transfer_group
+from vllm.distributed.kv_transfer import get_kv_offload_group
 from vllm.distributed.parallel_state import (get_tensor_model_parallel_rank,
                                              graph_capture)
 from vllm.forward_context import get_forward_context, set_forward_context
@@ -1743,6 +1744,14 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                     model_input,
                     kv_caches=kv_caches
                 )
+        if self.need_offloader_recv_kv(model_input, kv_caches):
+            # Offload_group receive logic
+            hidden_or_intermediate_states, bypass_model_exec, model_input = \
+                get_kv_offload_group().recv_kv_caches_and_hidden_states(
+                    model_executable,
+                    model_input,
+                    kv_caches=kv_caches
+                )
 
         multi_modal_kwargs = model_input.multi_modal_kwargs or {}
         seqlen_agnostic_kwargs = {
@@ -1787,6 +1796,13 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
                 kv_caches,
                 hidden_or_intermediate_states,
             )
+        if self.need_offloader_send_kv(model_input, kv_caches):
+            get_kv_offload_group().send_kv_caches_and_hidden_states(
+                model_executable,
+                model_input,
+                kv_caches,
+                hidden_or_intermediate_states,
+        )
 
         # Compute the logits in the last pipeline stage.
         if not get_pp_group().is_last_rank:
@@ -1905,6 +1921,33 @@ class ModelRunner(GPUModelRunnerBase[ModelInputForGPUWithSamplingMetadata]):
         return self.vllm_config.kv_transfer_config.is_kv_producer and (
             not is_profile_run) and is_prefill_run
 
+    def need_offloader_recv_kv(self, model_input, kv_caches) -> bool:
+        """Check if need to receive from kv_offload_group"""
+        if self.vllm_config.kv_offload_config is None:
+            return False
+
+        prefill_meta = model_input.attn_metadata.prefill_metadata
+        is_profile_run = (kv_caches[0].numel() == 0)
+        is_prefill_run = prefill_meta is not None
+        # We only support offload for prefill instance when P/D disaggregated
+        return ((self.vllm_config.kv_transfer_config is None
+                or self.vllm_config.kv_transfer_config.is_kv_producer) and
+                is_prefill_run and
+                not is_profile_run)
+
+    def need_offloader_send_kv(self, model_input, kv_caches) -> bool:
+        """Check if need to send to kv_offload_group"""
+        if self.vllm_config.kv_offload_config is None:
+            return False
+
+        prefill_meta = model_input.attn_metadata.prefill_metadata
+        is_profile_run = (kv_caches[0].numel() == 0)
+        is_prefill_run = prefill_meta is not None
+        # We only support offload for prefill instance when P/D disaggregated
+        return ((self.vllm_config.kv_transfer_config is None
+                 or self.vllm_config.kv_transfer_config.is_kv_producer) and
+                is_prefill_run and
+                not is_profile_run)
 
 # NOTE: this is nn.Module so the profiler can properly capture/group
 #  kernels calls made within the graph

@@ -328,6 +328,7 @@ class EngineArgs:
     worker_extension_cls: str = ParallelConfig.worker_extension_cls
 
     kv_transfer_config: Optional[KVTransferConfig] = None
+    kv_offload_config: Optional[KVTransferConfig] = None
 
     generation_config: Optional[str] = "auto"
     override_generation_config: Optional[Dict[str, Any]] = None
@@ -894,6 +895,12 @@ class EngineArgs:
                             help='The configurations for distributed KV cache '
                             'transfer. Should be a JSON string.')
 
+        parser.add_argument('--kv-offload-config',
+                            type=KVTransferConfig.from_cli,
+                            default=None,
+                            help='The configurations for distributed KV cache '
+                            'offload&reuse. Should be a JSON string.')
+
         parser.add_argument(
             '--worker-cls',
             type=str,
@@ -1284,6 +1291,7 @@ class EngineArgs:
             prompt_adapter_config=prompt_adapter_config,
             compilation_config=self.compilation_config,
             kv_transfer_config=self.kv_transfer_config,
+            kv_offload_config=self.kv_offload_config,
             additional_config=self.additional_config,
         )
 

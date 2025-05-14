@@ -3685,6 +3685,9 @@ class VllmConfig:
                                                   init=True)  # type: ignore
     kv_transfer_config: KVTransferConfig = field(default=None,
                                                  init=True)  # type: ignore
+    kv_offload_config: KVTransferConfig = field(default=None,
+                                                 init=True)  # type: ignore
+    """The configurations for distributed KV cache offload."""
     # some opaque config, only used to provide additional information
     # for the hash computation, mainly used for testing, debugging or out of
     # tree config registration.
@@ -3768,6 +3771,10 @@ class VllmConfig:
             vllm_factors.append("None")
         if self.kv_transfer_config:
             vllm_factors.append(self.kv_transfer_config.compute_hash())
+        else:
+            vllm_factors.append("None")
+        if self.kv_offload_config:
+            vllm_factors.append(self.kv_offload_config.compute_hash())
         else:
             vllm_factors.append("None")
         if self.additional_config:
