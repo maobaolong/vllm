@@ -34,6 +34,7 @@ from vllm.distributed.kv_transfer.kv_connector.v1.nixl import (
     NixlKVConnectorStats,
 )
 from vllm.v1.kv_cache_interface import KVCacheConfig
+from vllm.v1.kv_cache_layout import KVCacheAxis, KVCacheTensorLayout
 from vllm.v1.metrics.cache_hit_source import CacheHitSource
 from vllm.v1.outputs import KVConnectorOutput, KVConnectorWorkerMetadata
 
@@ -152,6 +153,51 @@ KVConnectorFactory.register_connector(
     __name__,
     MockDivergentHMAConnector.__name__,
 )
+
+
+@pytest.mark.cpu_test
+def test_registration_layouts_reach_every_connector():
+    connector = object.__new__(MultiConnector)
+    first = MagicMock(spec_set=KVConnectorBase_V1)
+    second = MagicMock(spec_set=KVConnectorBase_V1)
+    connector._connectors = [first, second]
+    caches = {"layer": torch.empty(2, 1, 4, 8)}
+    layouts = {
+        "layer": KVCacheTensorLayout(
+            (
+                KVCacheAxis.BLOCK,
+                KVCacheAxis.HEAD,
+                KVCacheAxis.TOKEN,
+                KVCacheAxis.CONTENT,
+            )
+        )
+    }
+
+    connector.register_kv_caches_with_layouts(caches, layouts)
+
+    for child in (first, second):
+        child.register_kv_caches_with_layouts.assert_called_once_with(caches, layouts)
+        child.register_kv_caches.assert_not_called()
+
+
+@pytest.mark.cpu_test
+def test_layout_registration_preserves_tensor_only_connector_hook():
+    connector = MagicMock(spec_set=KVConnectorBase_V1)
+    caches = {"layer": torch.empty(2, 1, 4, 8)}
+    layout = KVCacheTensorLayout(
+        (KVCacheAxis.BLOCK, KVCacheAxis.HEAD, KVCacheAxis.TOKEN, KVCacheAxis.CONTENT)
+    )
+    KVConnectorBase_V1.register_kv_caches_with_layouts(
+        connector, caches, {"layer": layout}
+    )
+    connector.register_kv_caches.assert_called_once_with(caches)
+
+    connector.register_kv_caches.reset_mock()
+    with pytest.raises(ValueError, match="rank"):
+        KVConnectorBase_V1.register_kv_caches_with_layouts(
+            connector, {"layer": torch.empty(2)}, {"layer": layout}
+        )
+    connector.register_kv_caches.assert_not_called()
 
 
 def test_register_finished_partial_tail_notifies_every_connector():
@@ -382,7 +428,7 @@ def test_multi_example_connector_consistency():
     # deferred load starts after the forward pass.
     expected_worker_prefix = [
         "get_mem_pool_context",
-        "register_kv_caches",
+        "register_kv_caches_with_layouts",
         "set_host_xfer_buffer_ops",
         "get_handshake_metadata",
         "handle_preemptions",

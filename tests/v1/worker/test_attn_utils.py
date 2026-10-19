@@ -37,6 +37,7 @@ from vllm.v1.kv_cache_interface import (
     SparseCacheRole,
     compute_layout_strides,
 )
+from vllm.v1.kv_cache_layout import KVCacheAxis, KVCacheTensorLayout
 from vllm.v1.worker.gpu import attn_utils
 from vllm.v1.worker.gpu.attn_utils import (
     FastPrefillHelper,
@@ -588,6 +589,18 @@ def test_allocate_compressed_mla_cache(
     )
 
     assert caches["layer.0"].shape == (expected_num_blocks, 1, expected_num_states, 128)
+    layouts = config.get_tensor_layouts(caches)
+    assert layouts == {
+        "layer.0": KVCacheTensorLayout(
+            (
+                KVCacheAxis.BLOCK,
+                KVCacheAxis.HEAD,
+                KVCacheAxis.TOKEN,
+                KVCacheAxis.CONTENT,
+            )
+        )
+    }
+    layouts["layer.0"].validate_shape(caches["layer.0"].shape)
 
 
 @pytest.mark.parametrize("layout", list(KVCacheLayout))

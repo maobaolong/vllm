@@ -58,6 +58,10 @@ uv pip install -r requirements/lint.txt
 pre-commit install
 ```
 
+If hook bootstrap fails on macOS with `CERTIFICATE_VERIFY_FAILED`, provide a
+trusted CA bundle through `SSL_CERT_FILE` before running the hooks. Do not
+disable certificate verification.
+
 ### Installing dependencies
 
 ```bash
