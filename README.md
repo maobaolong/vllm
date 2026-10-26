@@ -1,16 +1,14 @@
-# vLLM KV-cache axis registration review guide
+# KV cache axis registration: bilingual engineering blog
 
-[Read the illustrated guide](https://maobaolong.github.io/vllm/).
+The guide is now a native article on Maobaolong Engineering:
 
-This branch publishes a standalone reviewer guide for [vLLM #63699](https://github.com/vllm-project/vllm/pull/63699). It is separate from the implementation branch and is not part of the upstream code diff.
+- [English](https://maobaolong.github.io/en/blog/vllm-kv-cache-axis-registration/)
+- [中文](https://maobaolong.github.io/blog/vllm-kv-cache-axis-registration/)
 
-- Implementation snapshot: `383874621325a7057190711527ad268c183e0b19`.
-- RBLN adoption snapshot: `a930b4daaf19ea083f3f7d8f80ed3fa82cc7a27d`.
-- Status snapshot: 26 October 2026. Follow PR links for current status.
-- Download `index.html` and open it in a browser for offline reading. All figures, styles and interactions are embedded. External links are source references.
-- Styling follows the dark Maobaolong Engineering blog theme; Space Grotesk and IBM Plex fonts are embedded with their SIL Open Font License notices in the HTML.
-- `assets/` contains screenshots for the PR description; the HTML itself does not depend on them.
+The article uses the site's persistent language-switch button. Both languages include all 15 diagrams and the two interactive examples. It appears in the site's blog index and featured posts.
 
-The guide separates implemented producer/API work from proposed LMCache consumer and MP integration. It does not claim GPU, NPU, serving or LMCache E2E validation.
+This project site's root redirects to the appropriate language using the same preference key as the blog, preserving query parameters and section anchors. The implementation snapshot remains vLLM `383874621325a7057190711527ad268c183e0b19` and RBLN `a930b4daaf19ea083f3f7d8f80ed3fa82cc7a27d`.
 
-Prepared with OpenAI Codex assistance.
+The earlier standalone English HTML remains available at [snapshot ed5f19f](https://github.com/maobaolong/vllm/blob/ed5f19fe535c5f3d75ae6e038d6caba931ca3ee7/index.html). The assets directory keeps preview images referenced from the PR description.
+
+Related PR: [vLLM #63699](https://github.com/vllm-project/vllm/pull/63699). Blog source: [maobaolong.github.io](https://github.com/maobaolong/maobaolong.github.io).
